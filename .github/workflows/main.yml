@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch: # 加入手動觸發功能，方便測試
 
 jobs:
   build:
@@ -11,10 +12,10 @@ jobs:
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4 # 升級到 v4
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v4 # 升級到 v4
       with:
         dotnet-version: '8.0.x'
 
@@ -22,6 +23,7 @@ jobs:
       run: dotnet restore
 
     - name: Build
+      # 這裡路徑要確認跟你的 GitHub 儲存庫結構一致
       run: dotnet build ./CustomCommands/CustomCommands.csproj --configuration Release --no-restore
 
     - name: Publish
@@ -34,24 +36,14 @@ jobs:
 
     - name: Create Release
       id: create_release
-      uses: actions/create-release@v1
+      # 這裡改用 softprops/action-gh-release，因為 actions/create-release 官方已停止維護
+      uses: softprops/action-gh-release@v2
       env:
         GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
       with:
         tag_name: ${{ github.event.pull_request.title }}
-        release_name: ${{ github.event.pull_request.title }}
+        name: ${{ github.event.pull_request.title }}
         body: ${{ github.event.pull_request.body }}
         draft: true
         prerelease: false
-
-
-    - name: Upload Release Asset
-      id: upload-release-asset 
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./out/CustomCommands.zip
-        asset_name: CustomCommands.zip
-        asset_content_type: application/zip
+        files: ./out/CustomCommands.zip # 直接在這裡上傳，不用分兩步
