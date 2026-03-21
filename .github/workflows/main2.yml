@@ -21,17 +21,20 @@ jobs:
         dotnet-version: '8.0.x'
 
     - name: Restore dependencies
+      # 確保指向正確的專案檔路徑
       run: dotnet restore ./CustomCommands/CustomCommands.csproj
 
     - name: Build Plugin
-      # 使用 Release 模式編譯，確保效能最佳化
+      # 使用 Release 模式編譯，產出優化過的 .dll
       run: dotnet build ./CustomCommands/CustomCommands.csproj --configuration Release --no-restore
 
     - name: Upload Build Artifact
-      # 編譯成功後，會把 .dll 檔案放在 GitHub Actions 頁面供你下載
       uses: actions/upload-artifact@v4
       with:
         name: CustomCommands-v1.0.364
+        # 使用萬用匹配路徑，解決資料夾層級對齊問題
         path: |
-          ./CustomCommands/bin/Release/net8.0/CustomCommands.dll
-          ./CustomCommands/bin/Release/net8.0/CustomCommands.pdb
+          **/bin/Release/net8.0/CustomCommands.dll
+          **/bin/Release/net8.0/CustomCommands.pdb
+        # 如果還是找不到檔案，讓工作流程直接顯示失敗，方便除錯
+        if-no-files-found: error
