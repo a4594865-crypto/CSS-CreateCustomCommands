@@ -1,4 +1,4 @@
-﻿using CounterStrikeSharp.API.Core;
+using CounterStrikeSharp.API.Core;
 using CounterStrikeSharp.API.Core.Attributes;
 using CustomCommands.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -49,10 +49,10 @@ public partial class CustomCommands : BasePlugin, IPluginConfig<CustomCommandsCo
         _pluginGlobals.Config = Config;
         Config.Prefix = _replaceTagsFunctions.ReplaceColorTags(Config.Prefix);
 
-        // --- 改善重點：改用 Task.Run 配合 Server.NextFrame 避免阻塞 ---
+        // --- 修正重點：補齊 Task.Run 與 Server.NextFrame 的括號 ---
         Task.Run(async () =>
         {
-            // 在後台執行緒讀取 JSON 檔案，不影響遊戲運行
+            // 在後台執行緒讀取 JSON 檔案
             var comms = await _loadJson.GetCommandsFromJsonFiles(ModuleDirectory);
 
             if (comms == null)
@@ -61,7 +61,7 @@ public partial class CustomCommands : BasePlugin, IPluginConfig<CustomCommandsCo
                 return;
             }
 
-            // 讀取完成後，回到遊戲主執行緒安全地註冊指令
+            // 讀取完成後，回到遊戲主執行緒
             Server.NextFrame(() =>
             {
                 _eventManager.RegisterListeners();
@@ -77,6 +77,7 @@ public partial class CustomCommands : BasePlugin, IPluginConfig<CustomCommandsCo
                 }
 
                 Logger.LogInformation($"{ModuleName} 已成功加載，未造成伺服器卡頓。");
-        }
+            }); 
+        }); 
     }
-}
+} 
