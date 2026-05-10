@@ -44,32 +44,39 @@ public partial class CustomCommands : BasePlugin, IPluginConfig<CustomCommandsCo
             return;
         }
         
-        Logger.LogInformation(
-            $"{ModuleName} loaded!");
+        Logger.LogInformation($"{ModuleName} 正在進行優化加載 (非同步模式)...");
 
         _pluginGlobals.Config = Config;
         Config.Prefix = _replaceTagsFunctions.ReplaceColorTags(Config.Prefix);
 
-        var comms = Task.Run(async () => await _loadJson.GetCommandsFromJsonFiles(ModuleDirectory)).Result;
-
-        if (comms == null)
+        // --- 改善重點：改用 Task.Run 配合 Server.NextFrame 避免阻塞 ---
+        Task.Run(async () =>
         {
-            Logger.LogError("No commands found please create a config file");
-            return;
-        }
-        
-        _eventManager.RegisterListeners();
+            // 在後台執行緒讀取 JSON 檔案，不影響遊戲運行
+            var comms = await _loadJson.GetCommandsFromJsonFiles(ModuleDirectory);
 
-        if (comms != null) 
-        {
-            _pluginGlobals.CustomCommands = comms;
+            if (comms == null)
+            {
+                Logger.LogError("No commands found please create a config file");
+                return;
+            }
 
-            _registerCommands.CheckForDuplicateCommands();
-            _registerCommands.ConvertingCommandsForRegister();
+            // 讀取完成後，回到遊戲主執行緒安全地註冊指令
+            Server.NextFrame(() =>
+            {
+                _eventManager.RegisterListeners();
+                _pluginGlobals.CustomCommands = comms;
 
-            // Add commands from the JSON file to the server
-            foreach (var cmd in _pluginGlobals.CustomCommands)
-                _registerCommands.AddCommands(cmd);
-        }
+                _registerCommands.CheckForDuplicateCommands();
+                _registerCommands.ConvertingCommandsForRegister();
+
+                // 將指令註冊到伺服器
+                foreach (var cmd in _pluginGlobals.CustomCommands)
+                {
+                    _registerCommands.AddCommands(cmd);
+                }
+
+                Logger.LogInformation($"{ModuleName} 已成功加載，未造成伺服器卡頓。");
+            });
+        });
     }
-}
