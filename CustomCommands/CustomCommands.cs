@@ -77,6 +77,6 @@ public partial class CustomCommands : BasePlugin, IPluginConfig<CustomCommandsCo
                 }
 
                 Logger.LogInformation($"{ModuleName} 已成功加載，未造成伺服器卡頓。");
-            });
-        });
+        }
     }
+}
